@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { usePlaidLink, type PlaidLinkOnSuccess } from "react-plaid-link";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -13,6 +14,11 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import {
+  createPlaidLinkToken,
+  exchangePlaidPublicToken,
+  SIGN_IN_URL,
+} from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CATEGORIES } from "@/lib/mock-data";
 
@@ -48,6 +54,10 @@ export function OnboardingWizard() {
   });
   const [plaidConnecting, setPlaidConnecting] = useState(false);
   const [plaidConnected, setPlaidConnected] = useState(false);
+  const [plaidInstitution, setPlaidInstitution] = useState<string | null>(null);
+  const [plaidAccountCount, setPlaidAccountCount] = useState<number>(0);
+  const [plaidTxCount, setPlaidTxCount] = useState<number>(0);
+  const [linkToken, setLinkToken] = useState<string | null>(null);
 
   function next() {
     if (step < STEPS.length - 1) setStep(step + 1);
@@ -62,12 +72,65 @@ export function OnboardingWizard() {
     router.push("/dashboard");
   }
 
-  function fakeConnect() {
-    setPlaidConnecting(true);
-    setTimeout(() => {
+  const onPlaidSuccess: PlaidLinkOnSuccess = useCallback(
+    async (public_token) => {
+      try {
+        const result = await exchangePlaidPublicToken(public_token);
+        setPlaidConnected(true);
+        setPlaidInstitution(result.institution_name);
+        setPlaidAccountCount(result.accounts_synced);
+        setPlaidTxCount(result.transactions_added);
+        toast.success("Bank connected", {
+          description: `${result.institution_name ?? "Account"} · ${result.transactions_added} transactions synced`,
+        });
+      } catch (e) {
+        toast.error("Couldn't finish connecting", {
+          description: (e as Error).message,
+        });
+      } finally {
+        setPlaidConnecting(false);
+        setLinkToken(null);
+      }
+    },
+    []
+  );
+
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess: onPlaidSuccess,
+    onExit: () => {
       setPlaidConnecting(false);
-      setPlaidConnected(true);
-    }, 1800);
+      setLinkToken(null);
+    },
+  });
+
+  // Open Plaid Link as soon as we have a token and the SDK is ready.
+  useEffect(() => {
+    if (linkToken && ready) open();
+  }, [linkToken, ready, open]);
+
+  async function startPlaidConnect() {
+    setPlaidConnecting(true);
+    try {
+      const token = await createPlaidLinkToken();
+      setLinkToken(token);
+    } catch (e) {
+      setPlaidConnecting(false);
+      const msg = (e as Error).message;
+      if (msg.startsWith("401")) {
+        toast.error("Sign in first", {
+          description: "Plaid requires you to be signed in.",
+          action: {
+            label: "Sign in",
+            onClick: () => {
+              window.location.href = SIGN_IN_URL;
+            },
+          },
+        });
+      } else {
+        toast.error("Couldn't start Plaid", { description: msg });
+      }
+    }
   }
 
   return (
@@ -117,11 +180,13 @@ export function OnboardingWizard() {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm font-medium">
-                    {plaidConnected ? "Chase Sapphire Reserve" : "Choose a bank"}
+                    {plaidConnected
+                      ? (plaidInstitution ?? "Bank account")
+                      : "Choose a bank"}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {plaidConnected
-                      ? "Connected · 1 account · synced 12,300 transactions"
+                      ? `Connected · ${plaidAccountCount} account${plaidAccountCount === 1 ? "" : "s"} · ${plaidTxCount} transactions synced`
                       : "Plaid supports 12,000+ US institutions"}
                   </div>
                 </div>
@@ -131,7 +196,7 @@ export function OnboardingWizard() {
                   </span>
                 ) : (
                   <button
-                    onClick={fakeConnect}
+                    onClick={startPlaidConnect}
                     disabled={plaidConnecting}
                     className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 disabled:opacity-60 transition"
                   >
@@ -146,6 +211,13 @@ export function OnboardingWizard() {
                   </button>
                 )}
               </div>
+              {!plaidConnected && (
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Sandbox tip: pick any bank, use{" "}
+                  <span className="font-mono text-foreground">user_good</span> /{" "}
+                  <span className="font-mono text-foreground">pass_good</span> to sign in.
+                </p>
+              )}
             </div>
 
             <ul className="mt-6 space-y-2 text-xs text-muted-foreground">

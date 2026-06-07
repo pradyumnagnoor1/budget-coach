@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     plaid_client_id: str = ""
     plaid_secret: str = ""
     plaid_env: str = "sandbox"
+    # Fernet key (urlsafe base64-encoded 32 bytes) for encrypting Plaid access
+    # tokens at rest. In prod we swap this for an AWS KMS-backed adapter.
+    # Generate one with: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    plaid_token_encryption_key: str = ""
 
     cors_origins: list[str] = ["http://localhost:3000"]
 

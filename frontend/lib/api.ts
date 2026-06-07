@@ -23,3 +23,39 @@ export async function fetchMe(): Promise<AuthenticatedUser | null> {
     return null;
   }
 }
+
+// ---------- Plaid ----------
+
+export type PlaidExchangeResult = {
+  plaid_item_id: string;
+  institution_name: string | null;
+  accounts_synced: number;
+  transactions_added: number;
+};
+
+async function postJson<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ""}`);
+  }
+  return (await res.json()) as T;
+}
+
+export async function createPlaidLinkToken(): Promise<string> {
+  const data = await postJson<{ link_token: string }>("/api/plaid/link-token");
+  return data.link_token;
+}
+
+export async function exchangePlaidPublicToken(
+  publicToken: string
+): Promise<PlaidExchangeResult> {
+  return postJson<PlaidExchangeResult>("/api/plaid/exchange", {
+    public_token: publicToken,
+  });
+}
