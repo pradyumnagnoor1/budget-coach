@@ -1,12 +1,9 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowRight, Brain, Eye, Sparkles, TrendingUp } from "lucide-react";
 
-export default function LandingPage() {
-  const router = useRouter();
+import { SIGN_IN_URL } from "@/lib/api";
 
+export default function LandingPage() {
   return (
     <div className="flex flex-col flex-1 bg-background relative overflow-hidden">
       {/* Background gradient orb */}
@@ -34,12 +31,12 @@ export default function LandingPage() {
           </div>
           <span className="text-base font-semibold tracking-tight">Budget Coach</span>
         </div>
-        <Link
-          href="/dashboard"
+        <a
+          href={SIGN_IN_URL}
           className="text-sm text-muted-foreground hover:text-foreground transition"
         >
           Sign in
-        </Link>
+        </a>
       </header>
 
       <main className="relative z-10 flex-1 flex flex-col items-center text-center px-6 pt-20 pb-24 max-w-3xl mx-auto">
@@ -60,13 +57,13 @@ export default function LandingPage() {
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={() => router.push("/onboarding")}
+          <a
+            href={SIGN_IN_URL}
             className="group inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition shadow-[0_0_40px_-10px_rgba(139,92,246,0.6)]"
           >
             Continue with Google
             <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-          </button>
+          </a>
           <Link
             href="/dashboard"
             className="inline-flex items-center justify-center h-12 px-6 rounded-xl border border-border/60 bg-card/40 text-foreground hover:bg-card transition"

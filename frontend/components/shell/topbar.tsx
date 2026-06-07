@@ -1,10 +1,13 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import { Bell, LogOut, Search } from "lucide-react";
 
-import { MOCK_USER, NOTIFICATIONS } from "@/lib/mock-data";
+import { SIGN_OUT_URL } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { NOTIFICATIONS } from "@/lib/mock-data";
 
 export function Topbar() {
+  const { user } = useAuth();
   const unread = NOTIFICATIONS.filter((n) => !n.readAt).length;
 
   return (
@@ -21,6 +24,12 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-3">
+        {!user.isAuthenticated && (
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border/60 px-2 py-1 rounded">
+            Demo mode
+          </span>
+        )}
+
         <button
           aria-label="Notifications"
           className="relative h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border/60 bg-card/60 hover:bg-card transition"
@@ -35,12 +44,23 @@ export function Topbar() {
 
         <div className="flex items-center gap-2.5 pl-2">
           <div className="h-8 w-8 rounded-full bg-primary/20 ring-1 ring-primary/40 flex items-center justify-center text-xs font-semibold text-primary">
-            {MOCK_USER.avatarInitials}
+            {user.avatarInitials}
           </div>
           <div className="hidden sm:flex flex-col leading-tight">
-            <span className="text-sm font-medium">{MOCK_USER.name.split(" ")[0]}</span>
-            <span className="text-[11px] text-muted-foreground">{MOCK_USER.email}</span>
+            <span className="text-sm font-medium">{user.name.split(" ")[0]}</span>
+            <span className="text-[11px] text-muted-foreground">{user.email}</span>
           </div>
+          {user.isAuthenticated && (
+            <form action={SIGN_OUT_URL} method="POST">
+              <button
+                type="submit"
+                aria-label="Sign out"
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/60 transition ml-1"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </header>
